@@ -23,6 +23,8 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
+  isSubAdmin: boolean;
+  canMakeChanges: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,10 +45,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSubAdmin, setIsSubAdmin] = useState(false);
 
   // Admin credentials
   const ADMIN_EMAIL = "admin@catrink.in";
   const ADMIN_PASSWORD = "HardikSri@123";
+
+  // Sub-admin credentials (demo access)
+  const SUB_ADMIN_EMAIL = "demo@catrink.com";
+  const SUB_ADMIN_PASSWORD = "demo123";
+
+  // Can make changes (only full admin can make changes)
+  const canMakeChanges = isAdmin && !isSubAdmin;
 
   // Load session from localStorage on app start
   useEffect(() => {
@@ -56,16 +66,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const session = JSON.parse(savedSession);
         if (session.email === ADMIN_EMAIL) {
           setIsAdmin(true);
+          setIsSubAdmin(false);
           const mockAdmin = {
             uid: "admin-uid",
             email: ADMIN_EMAIL,
             displayName: "Admin",
           } as User;
           setCurrentUser(mockAdmin);
+        } else if (session.email === SUB_ADMIN_EMAIL) {
+          setIsAdmin(true);
+          setIsSubAdmin(true);
+          const mockSubAdmin = {
+            uid: "sub-admin-uid",
+            email: SUB_ADMIN_EMAIL,
+            displayName: "Demo Admin",
+          } as User;
+          setCurrentUser(mockSubAdmin);
         } else {
           // For regular users, restore from saved session
           setCurrentUser(session);
           setIsAdmin(false);
+          setIsSubAdmin(false);
         }
       } catch (error) {
         console.error("Error loading session:", error);
@@ -114,6 +135,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
       // For admin, we'll create a mock user session
       setIsAdmin(true);
+      setIsSubAdmin(false);
       const mockAdmin = {
         uid: "admin-uid",
         email: ADMIN_EMAIL,
@@ -129,13 +151,39 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           email: mockAdmin.email,
           displayName: mockAdmin.displayName,
           isAdmin: true,
+          isSubAdmin: false,
         }),
       );
 
       return Promise.resolve({ user: mockAdmin });
+    } else if (email === SUB_ADMIN_EMAIL && password === SUB_ADMIN_PASSWORD) {
+      // For sub-admin (demo), create a mock user session
+      setIsAdmin(true);
+      setIsSubAdmin(true);
+      const mockSubAdmin = {
+        uid: "sub-admin-uid",
+        email: SUB_ADMIN_EMAIL,
+        displayName: "Demo Admin",
+      } as User;
+      setCurrentUser(mockSubAdmin);
+
+      // Save sub-admin session to localStorage
+      localStorage.setItem(
+        "catrink_session",
+        JSON.stringify({
+          uid: mockSubAdmin.uid,
+          email: mockSubAdmin.email,
+          displayName: mockSubAdmin.displayName,
+          isAdmin: true,
+          isSubAdmin: true,
+        }),
+      );
+
+      return Promise.resolve({ user: mockSubAdmin });
     } else {
       // Regular Firebase authentication
       setIsAdmin(false);
+      setIsSubAdmin(false);
       const result = await signInWithEmailAndPassword(auth, email, password);
 
       // Save user session to localStorage
@@ -147,6 +195,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             email: result.user.email,
             displayName: result.user.displayName,
             isAdmin: false,
+            isSubAdmin: false,
           }),
         );
       }
@@ -159,6 +208,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     await signOut(auth);
     setCurrentUser(null);
     setIsAdmin(false);
+    setIsSubAdmin(false);
     // Clear localStorage session
     localStorage.removeItem("catrink_session");
   };
@@ -175,6 +225,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     resetPassword,
     loading,
     isAdmin,
+    isSubAdmin,
+    canMakeChanges,
   };
 
   return (
