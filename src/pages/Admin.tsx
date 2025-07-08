@@ -196,7 +196,7 @@ interface Coupon {
 }
 
 const Admin = () => {
-  const { isAdmin, logout } = useAuth();
+  const { isAdmin, isSubAdmin, canMakeChanges, logout } = useAuth();
   const {
     products,
     flavors,
@@ -804,6 +804,9 @@ const Admin = () => {
     type: "product" | "coupon" | "flavor" | "user" | "order",
     item?: any,
   ) => {
+    // For add operations (when item is undefined) check demo restriction
+    if (!item && !checkDemoRestriction()) return;
+
     setModalType(type);
     setEditingItem(item);
     setShowModal(true);
@@ -813,6 +816,61 @@ const Admin = () => {
     setShowModal(false);
     setEditingItem(null);
   };
+
+  // Check if user can make changes (demo restriction)
+  const checkDemoRestriction = () => {
+    if (!canMakeChanges) {
+      alert("You can't make changes in demo website!");
+      return false;
+    }
+    return true;
+  };
+
+  // Populate forms when editing
+  useEffect(() => {
+    if (editingItem && modalType === "product") {
+      setProductForm({
+        name: editingItem.name || "",
+        price: editingItem.price?.toString() || "",
+        image: editingItem.image || "",
+        description: editingItem.description || "",
+        flavor: editingItem.flavor || "",
+        energy: editingItem.energy || "Medium",
+        rating: editingItem.rating?.toString() || "",
+        reviews: editingItem.reviews?.toString() || "",
+        category: editingItem.category || "",
+      });
+    } else if (editingItem && modalType === "coupon") {
+      setCouponForm({
+        code: editingItem.code || "",
+        discount: editingItem.discount?.toString() || "",
+        type: editingItem.type || "percentage",
+        minOrder: editingItem.minOrder?.toString() || "",
+        maxUses: editingItem.maxUses?.toString() || "",
+        expiryDate: editingItem.expiryDate || "",
+        active: editingItem.active !== undefined ? editingItem.active : true,
+      });
+    } else if (editingItem && modalType === "flavor") {
+      setFlavorForm({
+        name: editingItem.name || "",
+        tagline: editingItem.tagline || "",
+        description: editingItem.description || "",
+        image: editingItem.image || "",
+        color: editingItem.color || "",
+        ingredients: editingItem.ingredients || "",
+        energyLevel: editingItem.energyLevel || "Medium",
+        rating: editingItem.rating?.toString() || "",
+      });
+    } else if (editingItem && modalType === "user") {
+      setUserForm({
+        name: editingItem.name || "",
+        email: editingItem.email || "",
+        phone: editingItem.phone || "",
+        status: editingItem.status || "active",
+        password: "", // Don't prefill password for security
+      });
+    }
+  }, [editingItem, modalType]);
 
   // Print Invoice function
   const printInvoice = (order: OrderWithTracking) => {
@@ -896,6 +954,7 @@ const Admin = () => {
   // Form submission handlers
   const handleProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!checkDemoRestriction()) return;
     if (editingItem) {
       // Update existing product
       setProducts(
@@ -932,6 +991,7 @@ const Admin = () => {
 
   const handleCouponSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!checkDemoRestriction()) return;
     if (editingItem) {
       // Update existing coupon
       setCoupons(
@@ -975,6 +1035,7 @@ const Admin = () => {
 
   const handleFlavorSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!checkDemoRestriction()) return;
     if (editingItem) {
       // Update existing flavor
       setFlavors(
@@ -1013,6 +1074,7 @@ const Admin = () => {
 
   const handleUserSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!checkDemoRestriction()) return;
     if (editingItem) {
       // Update existing user
       setUsers(
@@ -2607,6 +2669,460 @@ const Admin = () => {
           )}
         </div>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="glass-card max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-orbitron font-bold text-xl text-white">
+                  {editingItem ? `Edit ${modalType}` : `Add ${modalType}`}
+                </h3>
+                <button
+                  onClick={closeModal}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+
+              {/* Product Form */}
+              {modalType === "product" && (
+                <form onSubmit={handleProductSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={productForm.name}
+                      onChange={(e) =>
+                        setProductForm({ ...productForm, name: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Price
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={productForm.price}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          price: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Image (emoji)
+                    </label>
+                    <input
+                      type="text"
+                      value={productForm.image}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          image: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      placeholder="🥭"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={productForm.description}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          description: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      rows={3}
+                      required
+                    />
+                  </div>
+                  <div className="flex space-x-4">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="flex-1 px-4 py-2 border-2 border-white/20 text-white rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-4 py-2 bg-gradient-to-r from-neon-blue to-neon-purple text-white rounded-lg hover:scale-105 transition-transform"
+                    >
+                      {editingItem ? "Update" : "Add"} Product
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Coupon Form */}
+              {modalType === "coupon" && (
+                <form onSubmit={handleCouponSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Coupon Code
+                    </label>
+                    <input
+                      type="text"
+                      value={couponForm.code}
+                      onChange={(e) =>
+                        setCouponForm({
+                          ...couponForm,
+                          code: e.target.value.toUpperCase(),
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      placeholder="SAVE20"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Discount
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={couponForm.discount}
+                      onChange={(e) =>
+                        setCouponForm({
+                          ...couponForm,
+                          discount: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      placeholder="20"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Type
+                    </label>
+                    <select
+                      value={couponForm.type}
+                      onChange={(e) =>
+                        setCouponForm({
+                          ...couponForm,
+                          type: e.target.value as "percentage" | "fixed",
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-neon-blue"
+                    >
+                      <option value="percentage">Percentage</option>
+                      <option value="fixed">Fixed Amount</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Min Order Amount
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={couponForm.minOrder}
+                      onChange={(e) =>
+                        setCouponForm({
+                          ...couponForm,
+                          minOrder: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      placeholder="10.00"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Max Uses
+                    </label>
+                    <input
+                      type="number"
+                      value={couponForm.maxUses}
+                      onChange={(e) =>
+                        setCouponForm({
+                          ...couponForm,
+                          maxUses: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      placeholder="100"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Expiry Date
+                    </label>
+                    <input
+                      type="date"
+                      value={couponForm.expiryDate}
+                      onChange={(e) =>
+                        setCouponForm({
+                          ...couponForm,
+                          expiryDate: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-neon-blue"
+                      required
+                    />
+                  </div>
+                  <div className="flex space-x-4">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="flex-1 px-4 py-2 border-2 border-white/20 text-white rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-4 py-2 bg-gradient-to-r from-neon-cyan to-neon-purple text-white rounded-lg hover:scale-105 transition-transform"
+                    >
+                      {editingItem ? "Update" : "Add"} Coupon
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Flavor Form */}
+              {modalType === "flavor" && (
+                <form onSubmit={handleFlavorSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Flavor Name
+                    </label>
+                    <input
+                      type="text"
+                      value={flavorForm.name}
+                      onChange={(e) =>
+                        setFlavorForm({ ...flavorForm, name: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Tagline
+                    </label>
+                    <input
+                      type="text"
+                      value={flavorForm.tagline}
+                      onChange={(e) =>
+                        setFlavorForm({
+                          ...flavorForm,
+                          tagline: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={flavorForm.description}
+                      onChange={(e) =>
+                        setFlavorForm({
+                          ...flavorForm,
+                          description: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      rows={3}
+                      required
+                    />
+                  </div>
+                  <div className="flex space-x-4">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="flex-1 px-4 py-2 border-2 border-white/20 text-white rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-4 py-2 bg-gradient-to-r from-neon-purple to-neon-red text-white rounded-lg hover:scale-105 transition-transform"
+                    >
+                      {editingItem ? "Update" : "Add"} Flavor
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* User Form */}
+              {modalType === "user" && (
+                <form onSubmit={handleUserSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={userForm.name}
+                      onChange={(e) =>
+                        setUserForm({ ...userForm, name: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={userForm.email}
+                      onChange={(e) =>
+                        setUserForm({ ...userForm, email: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={userForm.phone}
+                      onChange={(e) =>
+                        setUserForm({ ...userForm, phone: e.target.value })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-orbitron mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={userForm.status}
+                      onChange={(e) =>
+                        setUserForm({
+                          ...userForm,
+                          status: e.target.value as
+                            | "active"
+                            | "inactive"
+                            | "banned",
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-neon-blue"
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="banned">Banned</option>
+                    </select>
+                  </div>
+                  {!editingItem && (
+                    <div>
+                      <label className="block text-white font-orbitron mb-2">
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        value={userForm.password}
+                        onChange={(e) =>
+                          setUserForm({ ...userForm, password: e.target.value })
+                        }
+                        className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-neon-blue"
+                        required={!editingItem}
+                      />
+                    </div>
+                  )}
+                  <div className="flex space-x-4">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="flex-1 px-4 py-2 border-2 border-white/20 text-white rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-4 py-2 bg-gradient-to-r from-neon-green to-neon-blue text-white rounded-lg hover:scale-105 transition-transform"
+                    >
+                      {editingItem ? "Update" : "Add"} User
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Order Details */}
+              {modalType === "order" && editingItem && (
+                <div className="space-y-4">
+                  <div className="bg-white/5 p-4 rounded-lg">
+                    <h4 className="font-orbitron font-bold text-white mb-2">
+                      Order Details
+                    </h4>
+                    <p className="text-white/70">
+                      Order ID: {editingItem.trackingId}
+                    </p>
+                    <p className="text-white/70">
+                      Customer: {editingItem.shippingAddress.fullName}
+                    </p>
+                    <p className="text-white/70">
+                      Total: ${editingItem.totalAmount.toFixed(2)}
+                    </p>
+                    <p className="text-white/70">
+                      Status: {editingItem.status}
+                    </p>
+                  </div>
+                  <div className="bg-white/5 p-4 rounded-lg">
+                    <h4 className="font-orbitron font-bold text-white mb-2">
+                      Items
+                    </h4>
+                    {editingItem.items.map((item: any) => (
+                      <div
+                        key={item.id}
+                        className="flex justify-between text-white/70"
+                      >
+                        <span>
+                          {item.name} x{item.quantity}
+                        </span>
+                        <span>${(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={closeModal}
+                    className="w-full px-4 py-2 bg-gradient-to-r from-neon-blue to-neon-purple text-white rounded-lg hover:scale-105 transition-transform"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
