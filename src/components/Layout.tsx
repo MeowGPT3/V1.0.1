@@ -30,7 +30,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const location = useLocation();
-  const { currentUser, logout, isAdmin } = useAuth();
+  const { currentUser, logout, isAdmin, isSubAdmin } = useAuth();
   const { getCartCount, setIsCartOpen } = useCart();
 
   // Add error handling for orders context
@@ -177,7 +177,11 @@ const Layout = ({ children }: LayoutProps) => {
                       <User className="w-5 h-5 text-white" />
                     )}
                     <span className="text-white text-sm">
-                      {isAdmin ? "Admin" : currentUser?.email?.split("@")[0]}
+                      {isAdmin
+                        ? isSubAdmin
+                          ? "Demo Admin"
+                          : "Admin"
+                        : currentUser?.email?.split("@")[0]}
                     </span>
                   </button>
 
@@ -303,7 +307,9 @@ const Layout = ({ children }: LayoutProps) => {
                         <span className="text-white/70 text-sm">
                           Logged in as:{" "}
                           {isAdmin
-                            ? "Admin"
+                            ? isSubAdmin
+                              ? "Demo Admin"
+                              : "Admin"
                             : currentUser?.email?.split("@")[0]}
                         </span>
                       </div>
